@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 		cout << "Runinng on " << GetPlatformName(platform_id) << ", " << GetDeviceName(platform_id, device_id) << endl;
 
 		//create a queue to which we will push commands for the device
-		cl::CommandQueue queue(context);
+		cl::CommandQueue queue(context, CL_QUEUE_PROFILING_ENABLE);
 
 		//2.2 Load & build the device code
 		cl::Program::Sources sources;
@@ -74,8 +74,13 @@ int main(int argc, char **argv) {
 		vector<string> time;
 		vector<float> airTemp;
 
+	
 
-		ReadData::ReadDataIn(&placeName, &year, &month, &day, &time, &airTemp, "C:/Users/user/Desktop/temp_lincolnshire_short.txt");
+		ReadData::ReadDataIn(&placeName, &year, &month, &day, &time, &airTemp, "G:/Documents/GitHub/Parralell-Assesment/ParallelAssesment/x64/Debug/temp_lincolnshire_short.txt");
+
+
+		int origonalDataSetSize = airTemp.size();
+		cout << "Number of teprature items: " << origonalDataSetSize << endl;
 
 	/*	for (int i = 0; i < 10; i++)
 		{
@@ -83,12 +88,12 @@ int main(int argc, char **argv) {
 				<< data[i].time << " " << data[i].airTemperature << endl;
 		}*/
 
-		for (int i = 0; i < 10; i++)
+		/*for (int i = 0; i < 10; i++)
 		{
 			cout << placeName[i] << " " << year[i] << " " << month[i] << " " << day[i] << " "
 				<< time[i] << " " << airTemp[i] << endl;
 		}
-
+*/
 	
 		
 		size_t local_size = airTemp.size();
@@ -144,7 +149,61 @@ int main(int argc, char **argv) {
 
 		//cout << "A = " << A << endl;
 		cout << "B = " << B[0] << endl;
-		cout << "Average = " << B[0] / airTemp.size();
+		cout << "Average = " << B[0] / airTemp.size() << endl;
+
+
+#pragma region SortingTmp
+
+		std::vector<float> sortedTmps(origonalDataSetSize);
+		
+
+		cl::Buffer sortingBuffer(context, CL_MEM_READ_WRITE, input_size);
+		cl ::Event sortingWriteBufferProfileEvent;
+		cl::Event sortingReadBufferProfileEvent;
+		cl::Event sortingkernalProfileEvent;
+
+		queue.enqueueWriteBuffer(sortingBuffer, CL_TRUE, 0, input_size, &airTemp[0],NULL, &sortingWriteBufferProfileEvent);
+		//queue.enqueueFillBuffer(buffer_B, 0, 0, input_size);
+
+		std::cout << "Buffer Writing time: [ns] " << sortingWriteBufferProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
+			- sortingWriteBufferProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;
+
+		std::cout << "Full profile info" << GetFullProfilingInfo(sortingWriteBufferProfileEvent, ProfilingResolution::PROF_US) << std::endl;
+
+
+		cl::Kernel sortingKernel = cl::Kernel(program,"BubbleSort");
+		sortingKernel.setArg(0, sortingBuffer);
+
+		//QUE KERNEL
+		queue.enqueueNDRangeKernel(sortingKernel, cl::NullRange, cl::NDRange(input_elements), cl::NullRange, NULL, &sortingkernalProfileEvent);
+
+		std::cout << "Kernel execution time [ns] " << sortingkernalProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
+			- sortingkernalProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;
+
+		std::cout << "Full profile info" << GetFullProfilingInfo(sortingkernalProfileEvent, ProfilingResolution::PROF_US) << std::endl;
+
+
+		//READ BUFFER
+		queue.enqueueReadBuffer(sortingBuffer, CL_TRUE, 0, input_size, &sortedTmps[0],NULL, &sortingReadBufferProfileEvent);
+	
+
+		std::cout << "Buuffer Reading time [ns] " << sortingReadBufferProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
+			- sortingReadBufferProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;
+
+		std::cout << "Full profile info" << GetFullProfilingInfo(sortingReadBufferProfileEvent, ProfilingResolution::PROF_US) << std::endl;
+
+
+		for (int i =0; i < 100; i++)
+		{
+			cout << "I: " << i <<" : "<< sortedTmps[i] << endl;
+		}
+
+
+
+#pragma endregion
+
+
+
 
 
 	}

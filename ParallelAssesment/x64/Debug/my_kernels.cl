@@ -86,3 +86,86 @@ __kernel void reduce_add_4(__global const int* A, __global int* B, __local int* 
 }
 
 
+//a double-buffered version of the Hillis-Steele inclusive scan
+//requires two additional input arguments which correspond to two local buffers
+__kernel void scan_add(__global const int* A, __global int* B, __local int* scratch_1, __local int* scratch_2) {
+	int id = get_global_id(0);
+	int lid = get_local_id(0);
+	int N = get_local_size(0);
+	__local int *scratch_3;//used for buffer swap
+
+						   //cache all N values from global memory to local memory
+	scratch_1[lid] = A[id];
+
+	barrier(CLK_LOCAL_MEM_FENCE);//wait for all local threads to finish copying from global to local memory
+
+	for (int i = 1; i < N; i *= 2) {
+		if (lid >= i)
+			scratch_2[lid] = scratch_1[lid] + scratch_1[lid - i];
+		else
+			scratch_2[lid] = scratch_1[lid];
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		//buffer swap
+		scratch_3 = scratch_2;
+		scratch_2 = scratch_1;
+		scratch_1 = scratch_3;
+	}
+
+	//copy the cache to output array
+	B[id] = scratch_1[lid];
+}
+
+
+
+void cmpxchg(__global float* A, __global float* B) {
+	//check values 
+	if (*A > *B) {
+		float t = *A; *A = *B; *B = t;
+	}
+}
+
+__kernel void BubbleSort(__global float* A)
+{
+	int id = get_global_id(0);
+	int N = get_global_size(0);
+	if(id == 1)
+		printf("ind %d \n ", N);
+
+		for (int i = 0; i < N; i += 2)
+		{
+			if (id % 2 == 1 && id + 1 < N)//ODD 
+			{
+				cmpxchg(&A[id], &A[id + 1]);//call compare function
+			}
+			
+
+			barrier(CLK_GLOBAL_MEM_FENCE);
+
+
+			if (id % 2 == 0 && id + 1 < N) { //even
+				cmpxchg(&A[id], &A[id + 1]);
+			
+				}
+
+			barrier(CLK_GLOBAL_MEM_FENCE);
+
+
+			}
+
+		
+		
+	
+
+		//barrier(CLK_GLOBAL_MEM_FENCE);
+
+		//if (id == 1)
+		//{
+		//	for(int i=0; i < 10; i++)
+		//	printf("ind %d : %f \n ",i,A[i]);
+		//}
+
+}
+
+
