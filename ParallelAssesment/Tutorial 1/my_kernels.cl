@@ -1,8 +1,4 @@
 
-__kernel void calculateMin()
-{
-
-}
 
 
 __kernel void calculateMax()
@@ -22,7 +18,8 @@ __kernel void calculateAverage()
 __kernel void reduce_add_2(__global const float* A, __global float* B) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
-
+	if (id == 1)
+		printf("ind %d \n ", N);
 	B[id] = A[id];
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
@@ -35,6 +32,9 @@ __kernel void reduce_add_2(__global const float* A, __global float* B) {
 		barrier(CLK_GLOBAL_MEM_FENCE);
 	}
 }
+
+
+
 
 //reduce using local memory (so called privatisation)
 __kernel void reduce_add_3(__global const int* A, __global int* B, __local int* scratch) {
@@ -88,11 +88,11 @@ __kernel void reduce_add_4(__global const int* A, __global int* B, __local int* 
 
 //a double-buffered version of the Hillis-Steele inclusive scan
 //requires two additional input arguments which correspond to two local buffers
-__kernel void scan_add(__global const int* A, __global int* B, __local int* scratch_1, __local int* scratch_2) {
+__kernel void scan_add(__global const float* A, __global float* B, __local float* scratch_1, __local float* scratch_2) {
 	int id = get_global_id(0);
 	int lid = get_local_id(0);
 	int N = get_local_size(0);
-	__local int *scratch_3;//used for buffer swap
+	__local float *scratch_3;//used for buffer swap
 
 						   //cache all N values from global memory to local memory
 	scratch_1[lid] = A[id];
@@ -119,7 +119,7 @@ __kernel void scan_add(__global const int* A, __global int* B, __local int* scra
 
 
 
-void cmpxchg(__global float* A, __global float* B) {
+void compareBubble(__global float* A, __global float* B) {
 	//check values 
 	if (*A > *B) {
 		float t = *A; *A = *B; *B = t;
@@ -137,7 +137,7 @@ __kernel void BubbleSort(__global float* A)
 		{
 			if (id % 2 == 1 && id + 1 < N)//ODD 
 			{
-				cmpxchg(&A[id], &A[id + 1]);//call compare function
+				compareBubble(&A[id], &A[id + 1]);//call compare function
 			}
 			
 
@@ -145,7 +145,7 @@ __kernel void BubbleSort(__global float* A)
 
 
 			if (id % 2 == 0 && id + 1 < N) { //even
-				cmpxchg(&A[id], &A[id + 1]);
+				compareBubble(&A[id], &A[id + 1]);
 			
 				}
 
@@ -153,19 +153,73 @@ __kernel void BubbleSort(__global float* A)
 
 
 			}
-
-		
-		
-	
-
-		//barrier(CLK_GLOBAL_MEM_FENCE);
-
-		//if (id == 1)
-		//{
-		//	for(int i=0; i < 10; i++)
-		//	printf("ind %d : %f \n ",i,A[i]);
-		//}
-
 }
 
 
+
+  __kernel void calculateMin(__global const float* input, __global float* output)
+  {
+	  int id = get_global_id(0);
+	  int N = get_global_size(0);
+	  if (id == 1)
+		  printf("Calc Min global size %d \n ", N);
+	  ////output[id] = input[id];
+
+
+	  ////	barrier(CLK_GLOBAL_MEM_FENCE);
+	  // float maximum = input[0];
+	  // printf("Global %d Pre Maximum %f \n", id, maximum);
+
+	  //for (int i = 1; i < N; i *= 2) { //i is a stride
+		 // 
+			//  printf("Global %d checked input %f \n", id, input[id + i]);
+
+		 // if (!(id % (i * 2)) && ((id + i) < N))
+		 // {
+			//  if (input[id + i] > maximum)
+			//	  maximum = input[id + i];
+
+
+		 // }
+
+
+		 // //printf("id: %d Sum = %f\n",id,B[id]);
+		 // barrier(CLK_GLOBAL_MEM_FENCE);
+	  //}
+
+		/*
+
+	  for (int i = 1; i < N; i *= 2) { //i is a stride
+		  if (!(id % (i * 2)) && ((id + i) < N))
+			  B[id] += B[id + i];
+		  */
+	
+	
+	  output[id] = input[id];
+
+	  barrier(CLK_GLOBAL_MEM_FENCE);
+
+	  for (int i = 1; i < N; i *= 2) { //i is a stride
+		  if ( ((id + i) < N))
+			  if (output[id + i] < output[id])
+			  {
+				  output[id] = output[id + i];
+				 // printf("ID %d  Val: %f \n",id, output[id]);
+				 
+			  }
+		
+		  barrier(CLK_GLOBAL_MEM_FENCE);
+	  }
+
+	  if(id == 0)
+		{ 
+		
+		
+
+		//int v = atomic_max(output, output[0]);
+		//printf("Sum = %d", output[0]);
+		
+	  }	
+
+
+  }

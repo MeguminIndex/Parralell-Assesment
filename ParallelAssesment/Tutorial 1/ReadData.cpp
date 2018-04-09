@@ -1,5 +1,5 @@
 #include "ReadData.h"
-
+#include <math.h>
 
 
 ReadData::ReadData()
@@ -19,8 +19,13 @@ void ReadData::ReadDataIn(vector<string>* placeName, vector<int>* year, vector<i
 	ifstream file(filename);
 	string tmpLine;
 
+	int n = 0;
+
 	while (getline(file, tmpLine))
 	{
+		if (tmpLine.empty())
+			continue;
+
 		//TemperatureData tmpData;
 		string subTmp;
 		string delimiter = " ";
@@ -33,6 +38,7 @@ void ReadData::ReadDataIn(vector<string>* placeName, vector<int>* year, vector<i
 		string timeT = "0000";
 		float airT = 0;
 
+#pragma region oldParse
 		//subTmp = tmpLine.substr(0, delimiterInd);
 		//tmpLine.erase(0, delimiterInd + delimiter.length());		
 		//try {
@@ -46,7 +52,7 @@ void ReadData::ReadDataIn(vector<string>* placeName, vector<int>* year, vector<i
 		//delimiterInd = tmpLine.find(delimiter);
 		//subTmp = tmpLine.substr(0, delimiterInd);
 		//tmpLine.erase(0, delimiterInd + delimiter.length());
-	
+
 		//try {
 		//	tmpData.year = stoi(subTmp);
 		//	//cout << "YEAR: " << subTmp << endl;
@@ -104,9 +110,12 @@ void ReadData::ReadDataIn(vector<string>* placeName, vector<int>* year, vector<i
 		//	cout << "Temp: failed to convert to float " << endl;
 		//}
 
+#pragma endregion
 
 		for (int i = 0; i <6; i++)
 		{
+			
+
 			delimiterInd = tmpLine.find(delimiter);
 			subTmp = tmpLine.substr(0, delimiterInd);
 			tmpLine.erase(0, delimiterInd + delimiter.length());
@@ -131,7 +140,10 @@ void ReadData::ReadDataIn(vector<string>* placeName, vector<int>* year, vector<i
 					timeT = subTmp;
 					break;
 				case 5:
-					airT = stof(subTmp);
+					//float x = stod(subTmp) * 10;
+
+					//airT = ceil(x);
+					airT = stod(subTmp);
 					break;
 
 				}
@@ -151,6 +163,8 @@ void ReadData::ReadDataIn(vector<string>* placeName, vector<int>* year, vector<i
 		day->push_back(dayT);
 		time->push_back(timeT);
 		airTemp->push_back(airT);
+
+		n++;
 	}
 
 }

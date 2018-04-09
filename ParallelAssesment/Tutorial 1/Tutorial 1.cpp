@@ -2,6 +2,7 @@
 #define __CL_ENABLE_EXCEPTIONS
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 
 #include <CL/cl.hpp>
@@ -76,7 +77,7 @@ int main(int argc, char **argv) {
 
 	
 
-		ReadData::ReadDataIn(&placeName, &year, &month, &day, &time, &airTemp, "G:/Documents/GitHub/Parralell-Assesment/ParallelAssesment/x64/Debug/temp_lincolnshire_short.txt");
+		ReadData::ReadDataIn(&placeName, &year, &month, &day, &time, &airTemp, "temp_lincolnshire.txt");
 
 
 		int origonalDataSetSize = airTemp.size();
@@ -94,8 +95,7 @@ int main(int argc, char **argv) {
 				<< time[i] << " " << airTemp[i] << endl;
 		}
 */
-	
-		
+		 
 		size_t local_size = airTemp.size();
 		size_t padding_size = airTemp.size() % local_size;
 
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
 		//insert additional neutral elements (0 for addition) so that the total will not be affected
 		if (padding_size) {
 			//create an extra vector with neutral values
-			std::vector<int> A_ext(local_size - padding_size, -1);
+			std::vector<float> A_ext(local_size - padding_size, -1);
 			//append that extra vector to our input
 			airTemp.insert(airTemp.end(), A_ext.begin(), A_ext.end());
 		}
@@ -127,28 +127,39 @@ int main(int argc, char **argv) {
 		//5.1 Copy arrays A and B to device memory
 		queue.enqueueWriteBuffer(buffer_A, CL_TRUE, 0, input_size, &airTemp[0]);
 		queue.enqueueFillBuffer(buffer_B, 0, 0, output_size);
+		
+		
 
 		//5.2 Setup and execute the kernel (i.e. device code)
 		cl::Kernel kernel_1 = cl::Kernel(program, "reduce_add_2");
 		kernel_1.setArg(0, buffer_A);
 		kernel_1.setArg(1, buffer_B);
-	
+		//kernel_1.setArg(2, cl::Local(local_size * sizeof(float)));
+	//	kernel_1.setArg(2, cl::Local(local_size * sizeof(float)));
+//		kernel_1.setArg(3, cl::Local(local_size * sizeof(float)));
 
 		cl::Device device = context.getInfo<CL_CONTEXT_DEVICES>()[device_id];//get device
 		cerr << "smallest workgroup size suggested: " << kernel_1.getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(device) << endl;
 		cerr << "Maximum work group size: " << kernel_1.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(device) << endl;
+		
 
+		float sum = 0;
+		for (int i = 0; i < airTemp.size(); i++)
+			sum += airTemp[i];
+		cout << "Serial sum" << sum << endl;
 
 		cl::Event profile_Event;
 		//call all kernels in a sequence
-		queue.enqueueNDRangeKernel(kernel_1, cl::NullRange, cl::NDRange(input_elements), cl::NullRange, NULL, &profile_Event);
+		queue.enqueueNDRangeKernel(kernel_1, cl::NullRange, cl::NDRange(local_size), cl::NullRange, NULL, &profile_Event);
 
 		queue.enqueueReadBuffer(buffer_B, CL_TRUE, 0, output_size, &B[0]);
 
 		
 
 		//cout << "A = " << A << endl;
-		cout << "B = " << B[0] << endl;
+		float val = B[0];
+		//cout << B << endl;
+		cout << "B = "  <<val << endl;
 		cout << "Average = " << B[0] / airTemp.size() << endl;
 
 
@@ -156,11 +167,14 @@ int main(int argc, char **argv) {
 
 		std::vector<float> sortedTmps(origonalDataSetSize);
 		
-
-		cl::Buffer sortingBuffer(context, CL_MEM_READ_WRITE, input_size);
+		cl::Buffer outsortingBuffer(context, CL_MEM_READ_WRITE, input_size);
+		cl::Buffer sortingBuffer(context, CL_MEM_READ_ONLY,input_size);
 		cl ::Event sortingWriteBufferProfileEvent;
 		cl::Event sortingReadBufferProfileEvent;
 		cl::Event sortingkernalProfileEvent;
+
+
+		//cout << airTemp << endl;
 
 		queue.enqueueWriteBuffer(sortingBuffer, CL_TRUE, 0, input_size, &airTemp[0],NULL, &sortingWriteBufferProfileEvent);
 		//queue.enqueueFillBuffer(buffer_B, 0, 0, input_size);
@@ -171,8 +185,9 @@ int main(int argc, char **argv) {
 		std::cout << "Full profile info" << GetFullProfilingInfo(sortingWriteBufferProfileEvent, ProfilingResolution::PROF_US) << std::endl;
 
 
-		cl::Kernel sortingKernel = cl::Kernel(program,"BubbleSort");
+		cl::Kernel sortingKernel = cl::Kernel(program,"calculateMin");
 		sortingKernel.setArg(0, sortingBuffer);
+		sortingKernel.setArg(1, outsortingBuffer);
 
 		//QUE KERNEL
 		queue.enqueueNDRangeKernel(sortingKernel, cl::NullRange, cl::NDRange(input_elements), cl::NullRange, NULL, &sortingkernalProfileEvent);
@@ -184,7 +199,7 @@ int main(int argc, char **argv) {
 
 
 		//READ BUFFER
-		queue.enqueueReadBuffer(sortingBuffer, CL_TRUE, 0, input_size, &sortedTmps[0],NULL, &sortingReadBufferProfileEvent);
+		queue.enqueueReadBuffer(outsortingBuffer, CL_TRUE, 0, input_size, &sortedTmps[0],NULL, &sortingReadBufferProfileEvent);
 	
 
 		std::cout << "Buuffer Reading time [ns] " << sortingReadBufferProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
@@ -193,11 +208,16 @@ int main(int argc, char **argv) {
 		std::cout << "Full profile info" << GetFullProfilingInfo(sortingReadBufferProfileEvent, ProfilingResolution::PROF_US) << std::endl;
 
 
-		for (int i =0; i < 100; i++)
+	/*	for (int i =0; i < sortedTmps.size(); i++)
 		{
 			cout << "I: " << i <<" : "<< sortedTmps[i] << endl;
 		}
+*/
+	//	cout << sortedTmps << endl;
 
+
+
+		cout << "Minimum Value: " << sortedTmps[0] << endl;
 
 
 #pragma endregion
