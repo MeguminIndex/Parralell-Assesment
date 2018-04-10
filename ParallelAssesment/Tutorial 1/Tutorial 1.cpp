@@ -254,8 +254,30 @@ int main(int argc, char **argv) {
 			maxVal = airTemp[i];
 		cout << "Serial Find Max" << maxVal << endl;
 
+		int nbrBins = 6;
+
+		std::vector<int> histBins(nbrBins);
+
+		cl::Buffer nbBins(context, CL_MEM_READ_WRITE, sizeof(int));
+		cl::Buffer outBuffer(context, CL_MEM_READ_WRITE, nbrBins* sizeof(int));
+		//cl::Buffer buffer_C(context, CL_MEM_READ_ONLY, sizeof(numBins));
+		//Part 5 - device operations
+
+		
+		queue.enqueueWriteBuffer(nbBins, CL_TRUE, 0, 1, &nbrBins);
+		queue.enqueueFillBuffer(outBuffer, 0, 0, nbrBins);//zero B buffer on
 
 
+		cl::Kernel histGramKernel = cl::Kernel(program,"hist_simple");
+		histGramKernel.setArg(0, buffer_A);
+		histGramKernel.setArg(1, outBuffer);
+		//kernel_1.setArg(2, nbBins);
+
+		queue.enqueueNDRangeKernel(histGramKernel, cl::NullRange, cl::NDRange(input_elements), cl::NullRange);
+
+		queue.enqueueReadBuffer(outBuffer, CL_TRUE, 0, nbrBins, &histBins[0]);
+
+		cout <<"Hist Bins: " << histBins << endl;
 	}
 	catch (cl::Error err) {
 		cerr << "ERROR: " << err.what() << ", " << getErrorString(err.err()) << endl;

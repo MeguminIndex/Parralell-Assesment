@@ -54,7 +54,6 @@ inline void AtomicAdd(volatile __global float *source, const float operand) {
 
 
 
-
 __kernel void calculateMax(__global const float* input, __global float* output)
 {
 
@@ -284,3 +283,33 @@ __kernel void BubbleSort(__global float* A)
 }
 
 
+
+
+__kernel void hist_simple(__global const float* A, __global int* H) {
+	int id = get_global_id(0);
+
+	
+	float bin_index = A[id];//take value as a bin index#
+	int index = -1;
+
+	if (bin_index < -20)
+		index = 0;
+	else if (bin_index < -10)
+		index = 1;
+	else if (bin_index < 0)
+		index = 2;
+	else if (bin_index < 10)
+		index = 3;
+	else if (bin_index < 20)
+		index = 4;
+	else
+		index = 5;
+	
+
+	
+
+	if (index != -1)
+		atomic_inc(&H[index]);//serial operation, not very efficient!
+
+
+}
