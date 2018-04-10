@@ -1,7 +1,10 @@
 ﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(392,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (Tutorial 1.vcxproj).  This can lead to incorrect clean and rebuild behavior.
   Tutorial 1.cpp
 Tutorial 1.cpp(83): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-  Tutorial 1.vcxproj -> G:\Documents\GitHub\Parralell-Assesment\ParallelAssesment\x64\Debug\ParallelAssesment.exe
-  Tutorial 1.vcxproj -> G:\Documents\GitHub\Parralell-Assesment\ParallelAssesment\x64\Debug\ParallelAssesment.pdb (Full PDB)
+  ReadData.cpp
+ReadData.cpp(157): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+  Generating Code...
+  Tutorial 1.vcxproj -> C:\Users\user\Desktop\Git\Parralell-Assesment\ParallelAssesment\x64\Debug\ParallelAssesment.exe
+  Tutorial 1.vcxproj -> C:\Users\user\Desktop\Git\Parralell-Assesment\ParallelAssesment\x64\Debug\ParallelAssesment.pdb (Full PDB)
   my_kernels.cl
           1 file(s) copied.

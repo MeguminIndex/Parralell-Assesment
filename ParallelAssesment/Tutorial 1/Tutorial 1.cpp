@@ -83,18 +83,6 @@ int main(int argc, char **argv) {
 		int origonalDataSetSize = airTemp.size();
 		cout << "Number of teprature items: " << origonalDataSetSize << endl;
 
-	/*	for (int i = 0; i < 10; i++)
-		{
-			cout << data[i].stationName << " " << data[i].year << " " << data[i].month << " " << data[i].day << " " 
-				<< data[i].time << " " << data[i].airTemperature << endl;
-		}*/
-
-		/*for (int i = 0; i < 10; i++)
-		{
-			cout << placeName[i] << " " << year[i] << " " << month[i] << " " << day[i] << " "
-				<< time[i] << " " << airTemp[i] << endl;
-		}
-*/
 		 
 		size_t local_size = airTemp.size();
 		size_t padding_size = airTemp.size() % local_size;
@@ -135,8 +123,8 @@ int main(int argc, char **argv) {
 		kernel_1.setArg(0, buffer_A);
 		kernel_1.setArg(1, buffer_B);
 		//kernel_1.setArg(2, cl::Local(local_size * sizeof(float)));
-	//	kernel_1.setArg(2, cl::Local(local_size * sizeof(float)));
-//		kernel_1.setArg(3, cl::Local(local_size * sizeof(float)));
+		//kernel_1.setArg(2, cl::Local(input_size * sizeof(float)));
+//		kernel_1.setArg(3, cl::Local(input_size * sizeof(float)));
 
 		cl::Device device = context.getInfo<CL_CONTEXT_DEVICES>()[device_id];//get device
 		cerr << "smallest workgroup size suggested: " << kernel_1.getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(device) << endl;
@@ -146,11 +134,11 @@ int main(int argc, char **argv) {
 		float sum = 0;
 		for (int i = 0; i < airTemp.size(); i++)
 			sum += airTemp[i];
-		cout << "Serial sum" << sum << endl;
+		cout << "Serial sum" <<setprecision(10) <<sum << endl;
 
 		cl::Event profile_Event;
 		//call all kernels in a sequence
-		queue.enqueueNDRangeKernel(kernel_1, cl::NullRange, cl::NDRange(local_size), cl::NullRange, NULL, &profile_Event);
+		queue.enqueueNDRangeKernel(kernel_1, cl::NullRange, cl::NDRange(input_elements), cl::NullRange, NULL, &profile_Event);
 
 		queue.enqueueReadBuffer(buffer_B, CL_TRUE, 0, output_size, &B[0]);
 
@@ -159,13 +147,14 @@ int main(int argc, char **argv) {
 		//cout << "A = " << A << endl;
 		float val = B[0];
 		//cout << B << endl;
-		cout << "B = "  <<val << endl;
+		cout << "B = "  <<B[0] << endl;
 		cout << "Average = " << B[0] / airTemp.size() << endl;
 
 
-#pragma region SortingTmp
+#pragma region FindMin
 
-		std::vector<float> sortedTmps(origonalDataSetSize);
+
+		std::vector<float> reduceMinResult(origonalDataSetSize);
 		
 		cl::Buffer outsortingBuffer(context, CL_MEM_READ_WRITE, input_size);
 		cl::Buffer sortingBuffer(context, CL_MEM_READ_ONLY,input_size);
@@ -192,14 +181,14 @@ int main(int argc, char **argv) {
 		//QUE KERNEL
 		queue.enqueueNDRangeKernel(sortingKernel, cl::NullRange, cl::NDRange(input_elements), cl::NullRange, NULL, &sortingkernalProfileEvent);
 
-		std::cout << "Kernel execution time [ns] " << sortingkernalProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
+		std::cout << "Find MIN Kernel execution time [ns] " << sortingkernalProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
 			- sortingkernalProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;
 
 		std::cout << "Full profile info" << GetFullProfilingInfo(sortingkernalProfileEvent, ProfilingResolution::PROF_US) << std::endl;
 
 
 		//READ BUFFER
-		queue.enqueueReadBuffer(outsortingBuffer, CL_TRUE, 0, input_size, &sortedTmps[0],NULL, &sortingReadBufferProfileEvent);
+		queue.enqueueReadBuffer(outsortingBuffer, CL_TRUE, 0, input_size, &reduceMinResult[0],NULL, &sortingReadBufferProfileEvent);
 	
 
 		std::cout << "Buuffer Reading time [ns] " << sortingReadBufferProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
@@ -207,22 +196,63 @@ int main(int argc, char **argv) {
 
 		std::cout << "Full profile info" << GetFullProfilingInfo(sortingReadBufferProfileEvent, ProfilingResolution::PROF_US) << std::endl;
 
-
-	/*	for (int i =0; i < sortedTmps.size(); i++)
-		{
-			cout << "I: " << i <<" : "<< sortedTmps[i] << endl;
-		}
-*/
 	//	cout << sortedTmps << endl;
 
 
 
-		cout << "Minimum Value: " << sortedTmps[0] << endl;
+		cout << "Minimum Value: " << reduceMinResult[0] << endl;
 
 
 #pragma endregion
 
 
+		float minVal = airTemp[0];
+		for (int i = 0; i < airTemp.size(); i++)
+			if (airTemp[i] < minVal)
+				minVal = airTemp[i];
+		cout << "Serial Find Min" << minVal << endl;
+
+
+#pragma region FindMax
+		std::vector<float> reduceMaxResult(origonalDataSetSize);
+
+		cl::Kernel findMaxKernal = cl::Kernel(program, "calculateMax");
+		findMaxKernal.setArg(0, sortingBuffer);
+		findMaxKernal.setArg(1, outsortingBuffer);
+
+		//QuE min kernel
+		queue.enqueueNDRangeKernel(findMaxKernal, cl::NullRange, cl::NDRange(input_elements), cl::NullRange, NULL, &sortingkernalProfileEvent);
+
+		std::cout << "Find Max Kernel execution time [ns] " << sortingkernalProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
+			- sortingkernalProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;
+
+		std::cout << "Full profile info" << GetFullProfilingInfo(sortingkernalProfileEvent, ProfilingResolution::PROF_US) << std::endl;
+
+		//READ BUFFER
+		queue.enqueueReadBuffer(outsortingBuffer, CL_TRUE, 0, input_size, &reduceMaxResult[0], NULL, &sortingReadBufferProfileEvent);
+
+
+		std::cout << "Buuffer Reading time [ns] " << sortingReadBufferProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_END>()
+			- sortingReadBufferProfileEvent.getProfilingInfo<CL_PROFILING_COMMAND_START>() << std::endl;
+
+		std::cout << "Full profile info" << GetFullProfilingInfo(sortingReadBufferProfileEvent, ProfilingResolution::PROF_US) << std::endl;
+
+		//	cout << sortedTmps << endl;
+
+		/*for (int i = 0; i < origonalDataSetSize; i++)
+			cout << "Val " << reduceMaxResult[i] << endl;*/
+
+		cout << "Maximum Value: " << reduceMaxResult[0] << endl;
+
+#pragma endregion
+
+
+
+		float maxVal = airTemp[0];
+		for (int i = 0; i < airTemp.size(); i++)
+			if(airTemp[i] > maxVal)
+			maxVal = airTemp[i];
+		cout << "Serial Find Max" << maxVal << endl;
 
 
 

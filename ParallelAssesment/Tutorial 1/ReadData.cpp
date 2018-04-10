@@ -21,22 +21,33 @@ void ReadData::ReadDataIn(vector<string>* placeName, vector<int>* year, vector<i
 
 	int n = 0;
 
+	string subTmp;
+	string delimiter = " ";
+	size_t  delimiterInd;// = tmpLine.find(delimiter);
+
+	string placeT = "";
+	int yearT = 0;
+	int monthT = 0;
+	int dayT = 0;
+	string timeT = "0000";
+	float airT = 0;
+
 	while (getline(file, tmpLine))
 	{
 		if (tmpLine.empty())
 			continue;
 
 		//TemperatureData tmpData;
-		string subTmp;
-		string delimiter = " ";
-		size_t  delimiterInd;// = tmpLine.find(delimiter);
+		 subTmp;
+		 delimiter = " ";
+		  delimiterInd;// = tmpLine.find(delimiter);
 
-		string placeT ="";
-		int yearT = 0;
-		int monthT = 0;
-		int dayT = 0;
-		string timeT = "0000";
-		float airT = 0;
+		 placeT = "";
+		 yearT = 0;
+		 monthT = 0;
+		 dayT = 0;
+		 timeT = "0000";
+		 airT = 0;
 
 #pragma region oldParse
 		//subTmp = tmpLine.substr(0, delimiterInd);
