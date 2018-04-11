@@ -163,22 +163,24 @@ __kernel void reduce_add(__global const float* A, __global float* B, __local flo
 	int lN = get_local_size(0);
 	int tid = get_local_id(0);
 
+	//copy some data to workgroup local memory
 	scratch[tid] = A[id];
 
-	barrier(CLK_LOCAL_MEM_FENCE);
+	barrier(CLK_LOCAL_MEM_FENCE);//lockdown local till transfer done
 
 	for (unsigned int i = 1; i < lN; i *= 2) {
 		if (tid % (2 * i) == 0 && ((tid + i) < lN))
 		{
-			scratch[tid] += scratch[tid + i];
+			scratch[tid] += scratch[tid + i];//reduction sum on local array set;
 
 
 			//printf("id: %d Sum = %f\n",id,B[id]);
 		}
-		barrier(CLK_LOCAL_MEM_FENCE);
+		barrier(CLK_LOCAL_MEM_FENCE);//sync each step of loop
 	}
 
-	 B[id] = scratch[tid];
+	 B[id] = scratch[tid];//update out put with the partial sums from local groups
+	 //depending on number of sums it possibly be best to finihs process on cpu
 
 }
 
@@ -233,7 +235,7 @@ __kernel void MyReduce(__global const float* A, __global float* B) {
 
 
 
-
+//could use to sort data but does not work on large datasets
 
 void compareBubble(__global float* A, __global float* B) {
 	//check values 

@@ -292,29 +292,29 @@ int main(int argc, char **argv) {
 		for (int i = 0; i < airTemp.size(); i++)
 			if(airTemp[i] > maxVal)
 			maxVal = airTemp[i];
+
+
 		cout << "Serial Find Max: " << maxVal << endl;
-		size_t nBins = 6;
+
+
+		size_t nBins = 6;//number of bins
 		size_t binsInputSize = nBins * sizeof(int);
 
-		std::vector<int> histBins(nBins);
-
-		//cl::Buffer nbBins(context, CL_MEM_READ_WRITE, sizeof(int));
-		cl::Buffer outBuffer(context, CL_MEM_READ_WRITE, binsInputSize);
-		//cl::Buffer buffer_C(context, CL_MEM_READ_ONLY, sizeof(numBins));
-		//Part 5 - device operations
+		std::vector<int> histBins(nBins);//hosts storage for the histopgram bins
 
 		
-		//queue.enqueueWriteBuffer(nbBins, CL_TRUE, 0, 1, &nbrBins);
+		cl::Buffer outBuffer(context, CL_MEM_READ_WRITE, binsInputSize);
+	
 		queue.enqueueFillBuffer(outBuffer, 0, 0, binsInputSize);//zero B buffer on
 
 
 		cl::Kernel histGramKernel = cl::Kernel(program,"hist_simple");
 		histGramKernel.setArg(0, buffer_A);
 		histGramKernel.setArg(1, outBuffer);
-		//kernel_1.setArg(2, nbBins);
 
+		// que kernel
 		queue.enqueueNDRangeKernel(histGramKernel, cl::NullRange, cl::NDRange(input_elements), cl::NullRange);
-
+		//read back the buffer results
 		queue.enqueueReadBuffer(outBuffer, CL_TRUE, 0, binsInputSize, &histBins[0]);
 
 		cout << "\t  -20 < :: <-10 :: <0 :: <10 :: <20 :: >=20" << endl;
