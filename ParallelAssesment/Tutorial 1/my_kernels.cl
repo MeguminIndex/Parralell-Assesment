@@ -186,21 +186,21 @@ __kernel void reduce_add_2(__global const float* A, __global float* B) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
 
-
+	//copy the data over to the output buffer which can be edited (due to not being readonly)
 	B[id] = A[id];
 
-	barrier(CLK_GLOBAL_MEM_FENCE);
+	barrier(CLK_GLOBAL_MEM_FENCE);//put barrier here to sync so the loop wont start before all the copying has finished
 
-	for (int i = 1; i < N; i *= 2) { //i is a stride
+	for (int i = 1; i < N; i *= 2) { //stride reduction 
 		if (!(id % (i * 2)) && ((id + i) < N))
 		{
-			B[id] += B[id + i];
+			B[id] += B[id + i]; //update the element
 
 			
 
 			//printf("id: %d Sum = %f\n",id,B[id]);
 		}
-		barrier(CLK_GLOBAL_MEM_FENCE);
+		barrier(CLK_GLOBAL_MEM_FENCE);//barrier to sing every itteration of loop
 	}
 }
 
@@ -212,20 +212,21 @@ __kernel void MyReduce(__global const float* A, __global float* B) {
 
 	//B[id] = A[id];
 
-	//private for each work item
+	//private variable for quick access and data will be stores here frequently
 	__private float val;
 
 	//barrier(CLK_GLOBAL_MEM_FENCE);
 
+	//dont need a barrier as there is no possibility of collisions since changes taking place in private memmory
 	for (int i = 1; i < N; i *= 2) { //i is a stride
 		if (!(id % (i * 2)) && ((id + i) < N))
 		{	
-			val += A[id + i];	
+			val += A[id + i];	//sum up on the private value
 		}
 		//barrier(CLK_GLOBAL_MEM_FENCE);
 	}
 
-	barrier(CLK_GLOBAL_MEM_FENCE);
+	//barrier(CLK_GLOBAL_MEM_FENCE);//barrier to ensure that all groups finished their loops before  moving the private data 
 
 	AtomicAdd(&B[0], val);
 }
@@ -280,7 +281,8 @@ __kernel void hist_simple(__global const float* A, __global int* H) {
 		//move value to private memory for quick acces since we could be checkin this several time depending which condition it meets
 		float bin_index = A[id];//take value as a bin index#
 
-		int index = -1;
+
+		int index = 5;
 
 
 		//harcoded bin values - improvement would to be pass in an array of values to defince the ranges along with the number of bins
