@@ -105,17 +105,17 @@ __kernel void calculateMin(__global const float* input, __global float* output)
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
-	for (int i = 1; i < N; i *= 2) { //i is a stride
+	for ( int i = 1; i < N; i *= 2) { //i is a stride
 		if (((id + i) < N))
 		{
 			// if (output[id + i] < output[id])
 			//{
-			//  output[id] = output[id + i];
+			  //output[id] = output[id + i];
 			// printf("ID %d  Val: %f \n",id, output[id]);
 			if (minV > output[id + i])
 				minV = output[id + i];
 
-			//}
+		//}
 		}
 		barrier(CLK_GLOBAL_MEM_FENCE);
 	}
@@ -125,15 +125,69 @@ __kernel void calculateMin(__global const float* input, __global float* output)
 }
 
 
+__kernel void SumADD(__global const float *input, __global float *output, __local float* scratch)
+{
+	int id = get_global_id(0);
+	int N = get_global_size(0);
+	int lN = get_local_size(0);
+	int tid = get_local_id(0);
+
+	scratch[tid] = input[id];
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	
+	
+	if (tid == 0)
+	{
+		for (int i = 0; i < lN; i++)
+		{
+			if(scratch[tid + i] < lN)
+			scratch[tid] += scratch[tid + i];
+		}
+	}
+
+	barrier(CLK_GLOBAL_MEM_FENCE);
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if(tid == 0)
+	output[id] = scratch[tid];
+
+
+}
+
+
+__kernel void reduce_add(__global const float* A, __global float* B, __local float* scratch) {
+	int id = get_global_id(0);
+	int N = get_global_size(0);
+	int lN = get_local_size(0);
+	int tid = get_local_id(0);
+
+	scratch[tid] = A[id];
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	for (unsigned int i = 1; i < lN; i *= 2) {
+		if (tid % (2 * i) == 0 && ((tid + i) < lN))
+		{
+			scratch[tid] += scratch[tid + i];
+
+
+			//printf("id: %d Sum = %f\n",id,B[id]);
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+	}
+
+	 B[id] = scratch[tid];
+
+}
+
 __kernel void reduce_add_2(__global const float* A, __global float* B) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
 
 
 	B[id] = A[id];
-
-	//private for each work item
-	__private float val;
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
 
@@ -143,8 +197,6 @@ __kernel void reduce_add_2(__global const float* A, __global float* B) {
 			B[id] += B[id + i];
 
 			
-			
-
 
 			//printf("id: %d Sum = %f\n",id,B[id]);
 		}
@@ -163,7 +215,7 @@ __kernel void MyReduce(__global const float* A, __global float* B) {
 	//private for each work item
 	__private float val;
 
-	barrier(CLK_GLOBAL_MEM_FENCE);
+	//barrier(CLK_GLOBAL_MEM_FENCE);
 
 	for (int i = 1; i < N; i *= 2) { //i is a stride
 		if (!(id % (i * 2)) && ((id + i) < N))
@@ -225,7 +277,7 @@ __kernel void hist_simple(__global const float* A, __global int* H) {
 	int id = get_global_id(0);
 	int N = get_global_size(0);
 
-	
+		//move value to private memory for quick acces since we could be checkin this several time depending which condition it meets
 		float bin_index = A[id];//take value as a bin index#
 
 		int index = -1;

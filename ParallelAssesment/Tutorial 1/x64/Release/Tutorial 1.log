@@ -1,11 +1,4 @@
-﻿  Tutorial 1.cpp
-Tutorial 1.cpp(83): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-  Generating code
-  2 of 873 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
-  Finished generating code
-  Tutorial 1.vcxproj -> G:\Documents\GitHub\Parralell-Assesment\ParallelAssesment\x64\Release\ParallelAssesment.exe
+﻿  Tutorial 1.vcxproj -> G:\Documents\GitHub\Parralell-Assesment\ParallelAssesment\x64\Release\ParallelAssesment.exe
   Tutorial 1.vcxproj -> G:\Documents\GitHub\Parralell-Assesment\ParallelAssesment\x64\Release\ParallelAssesment.pdb (Full PDB)
   my_kernels.cl
           1 file(s) copied.

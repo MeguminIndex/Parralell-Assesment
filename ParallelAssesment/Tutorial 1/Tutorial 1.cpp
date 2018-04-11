@@ -154,6 +154,15 @@ int main(int argc, char **argv) {
 		cout << "\nSum = "  << B[0] << endl;
 		cout << "Average = " << B[0] / airTemp.size() << endl;
 
+	/*	float val = 0;
+		for (int i =0; i < nr_groups; i++)
+		{
+			val += B[i];
+		}
+
+		cout << "Combine GPU SUM" << val << endl;
+*/
+
 #pragma region MyReduce
 
 		cl::Kernel myRedu = cl::Kernel(program, "MyReduce");
